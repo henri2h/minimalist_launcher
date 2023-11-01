@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'partials/app_button.dart';
 import 'partials/app_tile.dart';
 import 'partials/time_tile.dart';
+import 'utils/settings.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,14 +24,6 @@ class Favorite {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Favorite> favorites = [
-    Favorite(icon: Icons.phone, id: "com.google.android.dialer"),
-    Favorite(icon: Icons.message, id: "com.google.android.apps.messaging"),
-    Favorite(id: "com.facebook.orca", icon: Icons.group),
-    Favorite(id: "com.whatsapp", icon: Icons.timer),
-    Favorite(id: "com.instagram.android", icon: Icons.camera),
-  ];
-
   @override
   Widget build(BuildContext context) {
     List<Application>? apps;
@@ -60,7 +53,10 @@ class _HomePageState extends State<HomePage> {
               if (!snapshot.hasData) return const LinearProgressIndicator();
 
               final appList = snapshot.data!;
-              appList.sort((a, b) => a.appName.compareTo(b.appName));
+
+              appList.sort((a, b) =>
+                  a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
+
               return Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -113,15 +109,17 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(30.0),
-                        child: ListView.builder(
-                          itemCount: appList.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            final app = appList[index];
-                            return AppTile(app: app);
-                          },
-                        ),
+                      child: ListView.builder(
+                        itemCount: appList.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final app = appList[index];
+                          return AppTile(
+                            app: app,
+                            onFavorite: () {
+                              setState(() {});
+                            },
+                          );
+                        },
                       ),
                     ),
                     Padding(
@@ -131,27 +129,33 @@ class _HomePageState extends State<HomePage> {
                           return const Text("no data");
                         }
 
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            for (final fav in favorites)
-                              Builder(builder: (context) {
-                                final item = snapshot.data!.firstWhereOrNull(
-                                    (app) => app.packageName == fav.id);
-                                if (item == null) {
-                                  return Container();
-                                }
-                                return AppButton(
-                                  icon: fav.icon != null
-                                      ? Icon(fav.icon)
-                                      : Image.memory(
-                                          (item as ApplicationWithIcon).icon,
-                                          width: 32),
-                                  onPressed: () => item.openApp(),
-                                );
-                              }),
-                          ],
-                        );
+                        return FutureBuilder<List<Favorite>>(
+                            future: Settings.getFavorites(),
+                            builder: (context, snapFav) {
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  for (Favorite fav in snapFav.data ?? [])
+                                    Builder(builder: (context) {
+                                      final item = snapshot.data!
+                                          .firstWhereOrNull((app) =>
+                                              app.packageName == fav.id);
+                                      if (item == null) {
+                                        return Container();
+                                      }
+                                      return AppButton(
+                                        icon: fav.icon != null
+                                            ? Icon(fav.icon)
+                                            : Image.memory(
+                                                (item as ApplicationWithIcon)
+                                                    .icon,
+                                                width: 32),
+                                        onPressed: () => item.openApp(),
+                                      );
+                                    }),
+                                ],
+                              );
+                            });
                       }),
                     )
                   ],

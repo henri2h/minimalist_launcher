@@ -39,6 +39,8 @@ dependencies:
   intl: ^0.18.1
   collection: ^1.17.1
   shared_preferences: ^2.2.2
+  dynamic_color: ^1.6.8
+  flutter_windowmanager: ^0.2.0
 
 dev_dependencies:
   flutter_test:

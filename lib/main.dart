@@ -1,3 +1,4 @@
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 
 import 'home_page.dart';
@@ -11,18 +12,22 @@ class AppWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        scaffoldBackgroundColor: Colors.black,
-        colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.orange, brightness: Brightness.dark),
-      ),
-      home: const HomePage(),
-    );
+    return DynamicColorBuilder(
+        builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+      return MaterialApp(
+          title: 'Flutter Demo',
+          theme: ThemeData(
+            colorScheme: lightDynamic,
+            scaffoldBackgroundColor: Colors.transparent,
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: darkDynamic,
+            scaffoldBackgroundColor: Colors.transparent,
+            useMaterial3: true,
+          ),
+          color: Colors.transparent,
+          home: const HomePage());
+    });
   }
 }

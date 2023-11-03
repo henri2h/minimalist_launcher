@@ -25,18 +25,26 @@ class AppTile extends StatelessWidget {
             return Column(
               children: [
                 ListTile(
-                    title: const Text("Paramètres"),
+                    title: const Text("Settings"),
                     leading: const Icon(Icons.settings),
                     onTap: () async {
+                      Navigator.of(context).pop();
                       await app.openSettingsScreen();
                     }),
                 ListTile(
-                    title: const Text("Ajouter au favoris"),
+                    title: const Text("Add to favorites"),
                     leading: const Icon(Icons.favorite),
                     onTap: () async {
                       Navigator.of(context).pop();
                       await Settings.toggleFavorite(app.packageName);
                       onFavorite?.call();
+                    }),
+                ListTile(
+                    title: const Text("Uninstall app"),
+                    leading: const Icon(Icons.delete),
+                    onTap: () async {
+                      Navigator.of(context).pop();
+                      await app.uninstallApp();
                     }),
               ],
             );

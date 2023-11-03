@@ -130,21 +130,23 @@ class _HomePageState extends State<HomePage> {
                               },
                             ),
                           ),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 20.0),
-                            child: Builder(builder: (context) {
-                              if (!snapAppList.hasData) {
-                                return const Text("no data");
-                              }
+                          Builder(builder: (context) {
+                            if (!snapAppList.hasData) {
+                              return const Text("Loading");
+                            }
 
-                              return FutureBuilder<List<Favorite>>(
-                                  future: Settings.getFavorites(),
-                                  builder: (context, snapFav) {
-                                    return Row(
+                            return FutureBuilder<List<Favorite>>(
+                                future: Settings.getFavorites(),
+                                builder: (context, snapFav) {
+                                  final apps = snapFav.data ?? [];
+
+                                  if (apps.isEmpty) return Container();
+                                  return Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Row(
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
-                                        for (Favorite fav in snapFav.data ?? [])
+                                        for (Favorite fav in apps)
                                           Builder(builder: (context) {
                                             final item = snapAppList.data!
                                                 .firstWhereOrNull((app) =>
@@ -163,10 +165,10 @@ class _HomePageState extends State<HomePage> {
                                             );
                                           }),
                                       ],
-                                    );
-                                  });
-                            }),
-                          )
+                                    ),
+                                  );
+                                });
+                          })
                         ],
                       );
                     }),

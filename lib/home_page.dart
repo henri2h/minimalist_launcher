@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_windowmanager/flutter_windowmanager.dart';
+import 'package:mylauncher/utils/distance.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'partials/app_button.dart';
 import 'partials/app_tile.dart';
@@ -26,22 +29,104 @@ class Favorite {
 }
 
 class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+
+    // preload contact list
+    // getContacts();
+  }
+
   void callback(SearchController controller) {
     controller.clear();
     controller.closeView(null);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    List<Application>? apps;
-    Future<List<Application>> getAppList() async {
-      return apps ??= await DeviceApps.getInstalledApplications(
-        onlyAppsWithLaunchIntent: true,
-        includeSystemApps: true,
-        includeAppIcons: true,
-      );
+  /*List<Contact>? _contacts;
+  Future<List<Contact>> getContacts() async {
+    if (_contacts != null) {
+      return _contacts!;
     }
 
+    if (await FlutterContacts.requestPermission()) {
+      // Get all contacts (lightly fetched)
+      return _contacts = await FlutterContacts.getContacts();
+    }
+
+    return [];
+  }*/
+
+  Future<Iterable<Widget>> suggestionsBuilder(BuildContext context,
+      SearchController controller, List<Application> appList) async {
+    final text = controller.text.toLowerCase();
+
+    appList = appList.toList();
+
+    final map = <String, int>{};
+
+    int i = 0;
+    while (i < appList.length) {
+      final app = appList[i];
+
+      final aName = app.appName
+          .toLowerCase()
+          .substring(0, min(app.appName.length, text.length));
+
+      final dist = levenstheinDistance(aName, text);
+
+      if (dist < 2) {
+        map[app.packageName] = dist;
+        i++;
+      } else {
+        appList.removeAt(i);
+      }
+    }
+
+    appList.sort((A, B) {
+      int aDist = map[A.packageName]!;
+      int bDist = map[B.packageName]!;
+
+      return aDist.compareTo(bDist);
+    });
+
+    return [
+      if (text.isNotEmpty)
+        ListTile(
+          title: Text(text),
+          leading: const Icon(Icons.web),
+          subtitle: const Text("Launch web search"),
+          trailing: const Icon(Icons.navigate_next),
+          onTap: () async {
+            final Uri url = Uri.https("duckduckgo.com", "/", {"q": text});
+            if (!await launchUrl(url)) {
+              if(context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Could not launch $url")));
+              }
+            }
+            else{
+              callback(controller);
+            }
+          },
+        ),
+      ...appList.map((app) => AppTile(
+            app: app,
+            callback: () => callback(controller),
+          ))
+    ];
+  }
+
+  List<Application>? apps;
+  Future<List<Application>> getAppList() async {
+    return apps ??= await DeviceApps.getInstalledApplications(
+      onlyAppsWithLaunchIntent: true,
+      includeSystemApps: true,
+      includeAppIcons: true,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<bool>(
         future: FlutterWindowManager.addFlags(
             FlutterWindowManager.FLAG_SHOW_WALLPAPER),
@@ -75,17 +160,9 @@ class _HomePageState extends State<HomePage> {
                             child: TimeTile(),
                           ),
                           SearchAnchor(
-                            suggestionsBuilder: (context, controller) {
-                              final text = controller.text.toLowerCase();
-                              final apps = appList.where((element) =>
-                                  element.appName.toLowerCase().contains(text));
-                              return apps
-                                  .map((app) => AppTile(
-                                        app: app,
-                                        callback: () => callback(controller),
-                                      ))
-                                  .toList();
-                            },
+                            suggestionsBuilder: (context, controller) =>
+                                suggestionsBuilder(
+                                    context, controller, appList),
                             builder: (BuildContext context,
                                 SearchController controller) {
                               return Padding(

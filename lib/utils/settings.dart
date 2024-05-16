@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:mylauncher/home_page.dart';
+import 'package:mylauncher/pages/home_page.dart';
 
 import 'storage_manager.dart';
 

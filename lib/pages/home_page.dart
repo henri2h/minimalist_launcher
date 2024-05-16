@@ -9,10 +9,10 @@ import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'package:mylauncher/utils/distance.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'partials/app_button.dart';
-import 'partials/app_tile.dart';
-import 'partials/time_tile.dart';
-import 'utils/settings.dart';
+import '../partials/app_button.dart';
+import '../partials/app_tile.dart';
+import '../partials/time_tile.dart';
+import '../utils/settings.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -99,12 +99,11 @@ class _HomePageState extends State<HomePage> {
           onTap: () async {
             final Uri url = Uri.https("duckduckgo.com", "/", {"q": text});
             if (!await launchUrl(url)) {
-              if(context.mounted) {
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("Could not launch $url")));
               }
-            }
-            else{
+            } else {
               callback(controller);
             }
           },
@@ -193,20 +192,24 @@ class _HomePageState extends State<HomePage> {
                               );
                             },
                           ),
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: appList.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final app = appList[index];
-                                return AppTile(
-                                  app: app,
-                                  onFavorite: () {
-                                    setState(() {});
-                                  },
-                                );
-                              },
-                            ),
-                          ),
+                          snapAppList.hasData
+                              ? Expanded(
+                                  child: ListView.builder(
+                                    itemCount: appList.length,
+                                    itemBuilder:
+                                        (BuildContext context, int index) {
+                                      final app = appList[index];
+
+                                      return AppTile(
+                                        app: app,
+                                        onFavorite: () {
+                                          setState(() {});
+                                        },
+                                      );
+                                    },
+                                  ),
+                                )
+                              : const CircularProgressIndicator(),
                           Builder(builder: (context) {
                             if (!snapAppList.hasData) {
                               return const Text("Loading");

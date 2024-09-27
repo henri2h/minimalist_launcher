@@ -1,5 +1,6 @@
-import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
+import 'package:installed_apps/app_info.dart';
+import 'package:installed_apps/installed_apps.dart';
 
 import '../utils/settings.dart';
 
@@ -9,12 +10,14 @@ class AppTile extends StatelessWidget {
       required this.app,
       this.displayIcon = false,
       this.callback,
-      this.onFavorite});
+      this.onFavorite,
+      this.onDeleted});
 
-  final Application app;
+  final AppInfo app;
   final bool displayIcon;
   final VoidCallback? callback;
   final VoidCallback? onFavorite;
+  final VoidCallback? onDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +32,7 @@ class AppTile extends StatelessWidget {
                     leading: const Icon(Icons.settings),
                     onTap: () async {
                       Navigator.of(context).pop();
-                      await app.openSettingsScreen();
+                      await InstalledApps.openSettings(app.packageName);
                     }),
                 ListTile(
                     title: const Text("Add to favorites"),
@@ -44,7 +47,10 @@ class AppTile extends StatelessWidget {
                     leading: const Icon(Icons.delete),
                     onTap: () async {
                       Navigator.of(context).pop();
-                      await app.uninstallApp();
+                      await InstalledApps.uninstallApp(app.packageName);
+                      if (context.mounted) {
+                        onDeleted?.call();
+                      }
                     }),
               ],
             );
@@ -52,14 +58,14 @@ class AppTile extends StatelessWidget {
     }
 
     return ListTile(
-      title: Text(app.appName, style: const TextStyle(fontSize: 18)),
-      leading: displayIcon
+      title: Text(app.name, style: const TextStyle(fontSize: 18)),
+      leading: displayIcon && app.icon != null
           ? CircleAvatar(
-              child: Image.memory((app as ApplicationWithIcon).icon, width: 32),
+              child: Image.memory(app.icon!, width: 32),
             )
           : null,
       onTap: () async {
-        if (await app.openApp()) {
+        if (await InstalledApps.startApp(app.packageName) ?? false) {
           callback?.call();
         }
       },

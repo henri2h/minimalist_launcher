@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_windowmanager/flutter_windowmanager.dart';
+import 'package:installed_apps/app_info.dart';
+import 'package:installed_apps/installed_apps.dart';
+import 'package:mylauncher/partials/favorite_bar.dart';
 import 'package:mylauncher/utils/distance.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -57,7 +59,7 @@ class _HomePageState extends State<HomePage> {
   }*/
 
   Future<Iterable<Widget>> suggestionsBuilder(BuildContext context,
-      SearchController controller, List<Application> appList) async {
+      SearchController controller, List<AppInfo> appList) async {
     final text = controller.text.toLowerCase();
 
     appList = appList.toList();
@@ -68,9 +70,9 @@ class _HomePageState extends State<HomePage> {
     while (i < appList.length) {
       final app = appList[i];
 
-      final aName = app.appName
+      final aName = app.name
           .toLowerCase()
-          .substring(0, min(app.appName.length, text.length));
+          .substring(0, min(app.name.length, text.length));
 
       final dist = levenstheinDistance(aName, text);
 
@@ -115,13 +117,9 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
-  List<Application>? apps;
-  Future<List<Application>> getAppList() async {
-    return apps ??= await DeviceApps.getInstalledApplications(
-      onlyAppsWithLaunchIntent: true,
-      includeSystemApps: true,
-      includeAppIcons: true,
-    );
+  List<AppInfo>? apps;
+  Future<List<AppInfo>> getAppList() async {
+    return apps ??= await InstalledApps.getInstalledApps(true, false);
   }
 
   @override
@@ -142,14 +140,13 @@ class _HomePageState extends State<HomePage> {
                 await getAppList();
               },
               child: SafeArea(
-                child: FutureBuilder<List<Application>>(
+                child: FutureBuilder<List<AppInfo>>(
                     future: getAppList(),
                     builder: (context, snapAppList) {
                       final appList = snapAppList.data ?? [];
 
-                      appList.sort((a, b) => a.appName
-                          .toLowerCase()
-                          .compareTo(b.appName.toLowerCase()));
+                      appList.sort((a, b) =>
+                          a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,62 +189,38 @@ class _HomePageState extends State<HomePage> {
                               );
                             },
                           ),
-                          snapAppList.hasData
-                              ? Expanded(
-                                  child: ListView.builder(
+                          Expanded(
+                            child: snapAppList.hasData
+                                ? ListView.builder(
                                     itemCount: appList.length,
                                     itemBuilder:
                                         (BuildContext context, int index) {
                                       final app = appList[index];
 
                                       return AppTile(
-                                        app: app,
-                                        onFavorite: () {
-                                          setState(() {});
-                                        },
-                                      );
+                                          app: app,
+                                          onFavorite: () {
+                                            setState(() {});
+                                          },
+                                          onDeleted: () {
+                                            appList.removeWhere((element) =>
+                                                element.versionName ==
+                                                app.versionName);
+                                            if (mounted) {
+                                              setState(() {});
+                                            }
+                                          });
                                     },
-                                  ),
-                                )
-                              : const CircularProgressIndicator(),
+                                  )
+                                : const Center(
+                                    child: CircularProgressIndicator()),
+                          ),
                           Builder(builder: (context) {
                             if (!snapAppList.hasData) {
                               return const Text("Loading");
                             }
 
-                            return FutureBuilder<List<Favorite>>(
-                                future: Settings.getFavorites(),
-                                builder: (context, snapFav) {
-                                  final apps = snapFav.data ?? [];
-
-                                  if (apps.isEmpty) return Container();
-                                  return Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        for (Favorite fav in apps)
-                                          Builder(builder: (context) {
-                                            final item = snapAppList.data!
-                                                .firstWhereOrNull((app) =>
-                                                    app.packageName == fav.id);
-                                            if (item == null) {
-                                              return Container();
-                                            }
-                                            return AppButton(
-                                              icon: fav.icon != null
-                                                  ? Icon(fav.icon)
-                                                  : Image.memory(
-                                                      (item as ApplicationWithIcon)
-                                                          .icon,
-                                                      width: 32),
-                                              onPressed: () => item.openApp(),
-                                            );
-                                          }),
-                                      ],
-                                    ),
-                                  );
-                                });
+                            return FavoriteBar(apps: snapAppList.data ?? []);
                           })
                         ],
                       );
